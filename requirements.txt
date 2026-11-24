@@ -1,0 +1,29 @@
+
+# Data Processing
+pandas
+numpy
+
+# Machine Learning
+scikit-learn
+xgboost
+joblib
+
+# Experiment Tracking & Model Registry
+mlflow
+
+# Workflow Orchestration
+prefect
+
+# Database
+sqlalchemy
+psycopg[binary]
+python-dotenv
+
+# Model Serving
+fastapi
+uvicorn[standard]
+pydantic
+
+# Testing
+pytest
+httpx
