@@ -27,3 +27,7 @@ pydantic
 # Testing
 pytest
 httpx
+
+# UI
+streamlit
+requests
