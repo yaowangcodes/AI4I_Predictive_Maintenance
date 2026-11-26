@@ -61,7 +61,7 @@ flowchart TD
 | Training orchestration | Prefect | Implemented |
 | Database setup and integration tests | PostgreSQL, SQLAlchemy | Implemented; local tests passed |
 | Model serving | FastAPI, Uvicorn, Pydantic | In development |
-| Production traffic simulation | Python | Planned |
+| Production traffic simulation | Python | Implemented |
 | Drift and performance monitoring | Evidently | Planned |
 | Monitoring dashboard | Grafana | Planned |
 | GitHub Actions and branch protection | GitHub | Final verification pending |
@@ -214,7 +214,7 @@ Planned endpoints:
 | GET | `/` | Service information |
 | GET | `/health` | Health check |
 | POST | `/predict` | Validate inputs, run prediction, and persist prediction logs |
-| PATCH | `/predictions/{id}/label` | Record delayed ground truth |
+| POST | `/feedback` | Record delayed ground truth |
 
 The serving layer should load the complete registered Scikit-learn pipeline, including preprocessing, and record the actual loaded model version. Endpoint paths beyond the basic service are proposed, not verified implementations.
 
@@ -246,5 +246,139 @@ Use task-specific branches such as `feature/database` or `feature/model-serving`
 
 - The source dataset is synthetic and does not establish real-world predictive maintenance effectiveness.
 - Model performance and registered model metadata are not reported here because verified evaluation outputs have not been supplied.
-- API serving, traffic simulation, monitoring, and dashboard integration are not yet complete.
+- Monitoring and dashboard integration are not yet complete.
 - The setup instructions should be validated from a clean environment before final submission.
+
+## Traffic simulator (Step 7.1)
+
+`scripts/simulate_traffic.py` sends held-out observations to the existing FastAPI
+service using Pandas and Requests. It does not train or register models. Install
+`requirements.txt`, retain `artifacts/test.csv`, and start PostgreSQL, MLflow, and
+FastAPI using the instructions above. The API's `.env` must specify `MODEL_NAME`
+and `MODEL_VERSION` for an existing registered model. Do not rerun training just
+to generate traffic when the saved dataset and registered model already exist.
+
+From the project root:
+
+```bash
+python scripts/simulate_traffic.py --mode normal --n 5
+python scripts/simulate_traffic.py --mode normal --n 500 --delay 0.1
+python scripts/simulate_traffic.py --mode drift --n 500 --delay 0.1
+python scripts/simulate_traffic.py --mode drift --n 500 --drift-strength 2
+```
+
+Normal mode preserves feature values and sends the same row's `Machine failure`
+label to `POST /feedback` after a successful `POST /predict`. Sampling is with
+replacement, so any positive request count is supported, including counts larger
+than the test set. The default seed is `config.SEED` (42). Equal seeds and sample
+sizes select the same source rows in both modes, provided the dataset is unchanged.
+Repeated observations are expected and should not be treated as independent new
+measurements when interpreting later performance results.
+
+Drift mode adds 5 K to air temperature, 5 K to process temperature, 15 Nm to torque,
+and 50 minutes to tool wear, multiplied by `--drift-strength` (default 1). Product
+type and rotational speed stay unchanged. Fractional tool-wear increments round
+to the nearest whole minute using Python's `round` (ties to even), as required by
+the API's integer field. Strength must be finite and nonnegative. Inputs are
+validated against the existing API schema before any requests are sent. The CSV
+is never modified. Drift mode never submits ground truth, including at strength
+zero: original labels are not valid evidence for changed operating conditions.
+No performance scores or replacement labels are fabricated.
+
+Additional options:
+
+```bash
+API_URL=http://api:8000 python scripts/simulate_traffic.py --mode drift --n 5
+python scripts/simulate_traffic.py --api-url http://127.0.0.1:8000 --seed 123 --timeout 10
+python scripts/simulate_traffic.py --dataset artifacts/test.csv --manifest-dir artifacts/traffic_batches
+```
+
+`--api-url` overrides the exported `API_URL` environment variable. Inside Compose,
+use the API service's DNS name and mount the dataset and a persistent writable
+manifest directory. The simulator does not load `.env`; it needs only the API
+address, not database credentials. Delay is between prediction cycles (including
+normal-mode feedback). Timeout applies to each HTTP call. No requests are retried,
+since these endpoints do not provide idempotency guarantees.
+
+### Storage and batch identification
+
+The existing API commits each prediction into `prediction_logs` and returns its
+ID, label, failure probability, model name, and model version. Feedback updates
+`actual_label` and `labeled_at` on that same row. Drift rows remain unlabeled.
+There are no database migrations or changes to prediction logging.
+
+Each run creates a UUID-named JSON manifest in `artifacts/traffic_batches/` with
+mode, UTC timestamps, seed, dataset SHA-256, drift offsets, returned prediction
+IDs, model metadata, zero-based source row positions, per-request outcomes, and
+summary counts/latencies. It is saved atomically before requests and after each
+prediction and feedback attempt. Preserve these files alongside the database:
+future Evidently jobs should select the exact IDs from one manifest and compare
+their stored features with `artifacts/reference.csv`, which contains training
+features. Only successfully labeled normal records should enter performance
+monitoring.
+
+Simulation IDs can be separated from unrelated manual and API-test records using
+these manifests. Historical manual and test records have no provenance field;
+their individual origins cannot be recovered reliably. Do not infer their origin
+from timestamps or labels. Use exact manifest membership to exclude both from
+simulation analysis. Existing API integration tests create records outside these
+manifests.
+
+A timeout or invalid response can occur after a server commit. Such attempts are
+marked `failed_or_unknown` (or `pending` after interruption), and may have no
+recoverable ID. They must not be silently included in a batch by a time window.
+Fully eliminating this ambiguity would require a future API idempotency or
+server-side batch identifier. A hard process termination can leave a manifest
+with status `running`; inspect its pending attempts before using it.
+
+The final summary reports attempted/successful/failed predictions and feedback,
+elapsed time, and average prediction HTTP latency over all attempts (excluding
+feedback and delay). Exit codes are 0 for success, 1 for request/data/file errors,
+2 for invalid CLI arguments, and 130 for keyboard interruption. Error logs omit
+response bodies, credentials, and connection exception details.
+
+### Verification
+
+Offline simulator tests:
+
+```bash
+python -m pytest tests/test_traffic_simulator.py -q
+```
+
+Existing API integration tests require PostgreSQL and MLflow:
+
+```bash
+python -m pytest tests/test_api.py -q
+```
+
+Copy `prediction_ids` from a specific manifest into the SQL arrays below (replace
+`101, 102, 103` with the actual IDs). Run against the API's PostgreSQL database:
+
+```sql
+-- Exact batch records, including persisted inputs and served model identity.
+SELECT id, features, prediction, probability, actual_label,
+       model_name, model_version, predicted_at, labeled_at
+FROM prediction_logs
+WHERE id = ANY(ARRAY[101, 102, 103]::integer[])
+ORDER BY id;
+
+-- Check all returned IDs exist and inspect labeling per served model.
+WITH batch(id) AS (SELECT unnest(ARRAY[101, 102, 103]::integer[]))
+SELECT p.model_name, p.model_version,
+       count(*) AS requested_ids, count(p.id) AS stored_predictions,
+       count(p.actual_label) AS labeled_predictions,
+       count(p.labeled_at) AS feedback_timestamps
+FROM batch b LEFT JOIN prediction_logs p ON p.id = b.id
+GROUP BY p.model_name, p.model_version;
+
+-- Must return zero for a drift manifest, absent later valid external labeling.
+SELECT count(*) AS unexpectedly_labeled_drift_rows
+FROM prediction_logs
+WHERE id = ANY(ARRAY[101, 102, 103]::integer[])
+  AND (actual_label IS NOT NULL OR labeled_at IS NOT NULL);
+```
+
+For normal traffic with successful feedback, both label counts should equal the
+number of stored predictions. Compare each label with its manifest `actual_label`
+and its source CSV row. Predictions whose feedback failed remain a valid part of
+the feature batch but must be excluded from performance calculations until labeled.

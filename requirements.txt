@@ -31,3 +31,6 @@ httpx
 # UI
 streamlit
 requests
+
+pytest
+httpx

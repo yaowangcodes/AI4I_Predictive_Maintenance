@@ -21,6 +21,9 @@ from database.models import PredictionLog
 
 from api.schemas import PredictionResponse
 
+from sqlalchemy import select
+from database.models import MonitoringMetric
+
 logger = logging.getLogger(__name__)
 
 
@@ -244,4 +247,46 @@ def feedback(
         raise HTTPException(
             status_code=500,
             detail="Failed to save feedback"
+        )
+
+
+@app.get("/metrics")
+def metrics(
+    db: Session = Depends(get_db)
+):
+
+    try:
+
+        # Step 1: Create query
+        statement = (
+            select(MonitoringMetric)
+            .order_by(MonitoringMetric.id.desc())
+            .limit(100)
+        )
+
+        # Step 2: Execute query
+        records = db.scalars(statement).all()
+
+        # Step 3: Convert database records into dictionaries
+        results = [
+            {
+                column.name: getattr(record, column.key)
+                for column in MonitoringMetric.__table__.columns
+            }
+            for record in records
+        ]
+
+        # Step 4: Return results
+        return {
+            "count": len(results),
+            "metrics": results
+        }
+
+    except Exception:
+
+        logger.exception("Failed to retrieve metrics")
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve metrics"
         )
