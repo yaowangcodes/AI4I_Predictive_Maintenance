@@ -1,0 +1,30 @@
+
+FROM python:3.13.9-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY config.py /app/config.py
+COPY training_flow.py /app/training_flow.py
+COPY monitoring_flow.py /app/monitoring_flow.py
+
+COPY tasks /app/tasks
+COPY scripts /app/scripts
+COPY database /app/database
+COPY api /app/api
+COPY monitoring /app/monitoring
+
+COPY ai4i2020.csv /app/ai4i2020.csv
+
+RUN mkdir -p /app/artifacts
+
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+CMD ["python", "training_flow.py"]

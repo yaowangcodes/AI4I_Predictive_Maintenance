@@ -1,4 +1,5 @@
 
+import os
 from pathlib import Path
 
 # Project directory
@@ -32,7 +33,11 @@ NUM = [
 FEATURES = CAT + NUM
 
 # MLflow configuration
-TRACKING_URI = "http://127.0.0.1:5001"
+# MLflow configuration
+TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "http://127.0.0.1:5001"
+)
 
 EXPERIMENT_NAME = "AI4I_predictive_maintenance_V2"
 

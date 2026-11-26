@@ -3,9 +3,13 @@
 .venv*
 __pycache__
 .pytest_cache
-artifacts
-mlartifacts
+artifacts/
+mlartifacts/
 mlflow.db
+mlflow.db-*
+mlflow_storage/
+backups/
+screenshots/
 *.ipynb
 *.pdf
 .DS_Store

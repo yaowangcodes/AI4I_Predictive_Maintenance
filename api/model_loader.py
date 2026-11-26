@@ -18,9 +18,33 @@ def load_registered_model():
 
     model_name = os.environ["MODEL_NAME"]
 
-    model_version = os.environ["MODEL_VERSION"]
+    model_version = os.getenv("MODEL_VERSION", "").strip()
 
     mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_registry_uri(tracking_uri)
+
+    # Automatically select the latest ready version
+    # when MODEL_VERSION is not specified.
+    if not model_version:
+
+        client = mlflow.MlflowClient()
+
+        versions = client.search_model_versions(
+            f"name = '{model_name}'"
+        )
+
+        ready_versions = [
+            int(v.version)
+            for v in versions
+            if v.status == "READY"
+        ]
+
+        if not ready_versions:
+            raise RuntimeError(
+                f"No ready model found: {model_name}"
+            )
+
+        model_version = str(max(ready_versions))
 
     model_uri = f"models:/{model_name}/{model_version}"
 
