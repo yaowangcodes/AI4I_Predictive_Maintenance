@@ -1,5 +1,114 @@
 services:
 
+
+  training:
+    profiles: [jobs]
+
+    image: ai4i-pipeline:local
+
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline
+
+    entrypoint: ["python", "training_flow.py"]
+
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+    volumes:
+      - ./artifacts:/app/artifacts
+
+    depends_on:
+      - mlflow
+
+  simulator:
+    profiles: [jobs]
+
+    image: ai4i-pipeline:local
+
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline
+
+    entrypoint: ["python", "scripts/simulate_traffic.py"]
+
+    environment:
+      API_URL: http://api:8000
+
+    volumes:
+      - ./artifacts:/app/artifacts
+
+    depends_on:
+      - api
+
+  monitoring:
+    profiles: [jobs]
+
+    image: ai4i-pipeline:local
+
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline
+
+    entrypoint: ["python", "monitoring_flow.py"]
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+    volumes:
+      - ./artifacts:/app/artifacts
+
+    depends_on:
+      - postgres
+      - api
+
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+
+    container_name: ai4i_mlflow
+
+    command:
+      - mlflow
+      - server
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --serve-artifacts
+      - --artifacts-destination
+      - /mlflow/mlartifacts
+      - --allowed-hosts
+      - "localhost:*,127.0.0.1:*,mlflow:*"
+
+    ports:
+      - "127.0.0.1:5001:5000"
+
+    volumes:
+      - ./mlflow_storage:/mlflow
+
+    restart: unless-stopped
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   postgres:
     image: postgres:16
 
@@ -18,5 +127,178 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      MODEL_NAME: ${MODEL_NAME}
+      MODEL_VERSION: ${MODEL_VERSION:-}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,json; d=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)); assert d['model_loaded'] and d['database_connected']"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    restart: unless-stopped
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+
+    environment:
+      API_URL: http://api:8000
+
+    ports:
+      - "127.0.0.1:8501:8501"
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=5)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus.host.yml:/etc/prometheus/prometheus.host.yml:ro
+      - prometheus_data:/prometheus
+
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+    ports:
+      - "127.0.0.1:9090:9090"
+
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.3.2
+
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - 'test -n "$$GF_SECURITY_ADMIN_PASSWORD" && test -n "$$GRAFANA_DB_PASSWORD" || { echo "Load .env.monitoring before starting Grafana"; exit 1; }; exec /run.sh'
+
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-ai4i_grafana}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+      bootstrap:
+        condition: service_completed_successfully
+
+    restart: unless-stopped
+
+
+  bootstrap:
+    image: ai4i-pipeline:local
+
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline
+
+    entrypoint: ["python", "scripts/bootstrap.py"]
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_NAME: ${MODEL_NAME}
+      MODEL_VERSION: ${MODEL_VERSION:-}
+
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-ai4i_grafana}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+
+    volumes:
+      - ./artifacts:/app/artifacts
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+
+    restart: "no"
+
+
 volumes:
+  prometheus_data:
+  grafana_data:
   postgres_data:

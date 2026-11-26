@@ -1,0 +1,57 @@
+{
+  "features": [
+    {
+      "name": "Type",
+      "dtype": "object",
+      "kind": "categorical"
+    },
+    {
+      "name": "Air temperature [K]",
+      "dtype": "float64",
+      "kind": "numeric"
+    },
+    {
+      "name": "Process temperature [K]",
+      "dtype": "float64",
+      "kind": "numeric"
+    },
+    {
+      "name": "Rotational speed [rpm]",
+      "dtype": "int64",
+      "kind": "numeric"
+    },
+    {
+      "name": "Torque [Nm]",
+      "dtype": "float64",
+      "kind": "numeric"
+    },
+    {
+      "name": "Tool wear [min]",
+      "dtype": "int64",
+      "kind": "numeric"
+    }
+  ],
+  "target": {
+    "name": "Machine failure",
+    "values": [
+      0,
+      1
+    ]
+  },
+  "allowed_categories": {
+    "Type": [
+      "L",
+      "M",
+      "H"
+    ]
+  },
+  "missing_policy": "median for numeric, most frequent for categorical",
+  "feature_order": [
+    "Type",
+    "Air temperature [K]",
+    "Process temperature [K]",
+    "Rotational speed [rpm]",
+    "Torque [Nm]",
+    "Tool wear [min]"
+  ]
+}

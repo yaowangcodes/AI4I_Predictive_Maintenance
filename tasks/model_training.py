@@ -177,7 +177,7 @@ def train_models(models, preprocessor, splits,
 
                 mlflow.sklearn.log_model(
                     pipeline,
-                    name="pipeline",
+                    name=f"{name}_pipeline", 
                     input_example=mlflow_X_train.head(5),
                     signature=infer_signature(
                         mlflow_X_train,

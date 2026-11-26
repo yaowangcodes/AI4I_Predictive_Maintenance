@@ -5,6 +5,7 @@ from sqlalchemy import (
     String,
     DateTime,
     CheckConstraint,
+    Index,
     func
 )
 
@@ -80,6 +81,18 @@ class MonitoringMetric(Base):
 
     __tablename__ = "monitoring_metrics"
 
+    # Nullable for legacy rows; new monitoring runs populate all identity fields.
+    run_id = Column(String(36), nullable=True, index=True)
+    batch_id = Column(String(36), nullable=True, index=True)
+    simulation_mode = Column(String(20), nullable=True)
+    metric_key = Column(String(200), nullable=True)
+    statistical_method = Column(String(100), nullable=True)
+    details = Column(JSONB, nullable=True)
+
+    __table_args__ = (
+        Index("uq_monitoring_run_metric", "run_id", "metric_key", unique=True),
+    )
+
     id = Column(
         Integer,
         primary_key=True,
@@ -94,7 +107,7 @@ class MonitoringMetric(Base):
 
     metric_value = Column(
         Float,
-        nullable=False
+        nullable=True
     )
 
     feature_name = Column(

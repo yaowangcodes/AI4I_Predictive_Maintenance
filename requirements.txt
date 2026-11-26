@@ -1,15 +1,16 @@
 
 # Data Processing
-pandas
+# Data Processing
+pandas==2.2.3
 numpy
 
 # Machine Learning
-scikit-learn
+scikit-learn==1.7.2
 xgboost
 joblib
 
 # Experiment Tracking & Model Registry
-mlflow
+mlflow==3.18.0
 
 # Workflow Orchestration
 prefect
@@ -27,3 +28,14 @@ pydantic
 # Testing
 pytest
 httpx
+
+# UI
+streamlit
+requests
+
+# Drift and Model Performance Monitoring
+evidently==0.7.23
+
+# API Operational Metrics
+prometheus-client==0.21.1
+
