@@ -1,3 +1,6 @@
 .env
 __pycache__/
 artifacts/traffic_batches/
+.venv-monitoring/
+artifacts/monitoring/
+.env.monitoring

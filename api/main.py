@@ -1,7 +1,8 @@
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from contextlib import asynccontextmanager
 from api.model_loader import load_registered_model
+from api.instrumentation import instrument_app
 
 from api.schemas import FeedbackRequest
 from datetime import datetime, timezone
@@ -51,6 +52,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+instrument_app(app)
+
 
 def get_db():
 
@@ -250,18 +254,26 @@ def feedback(
         )
 
 
-@app.get("/metrics")
+@app.get("/model-metrics")
 def metrics(
+    run_id: str | None = None,
+    batch_id: str | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
 
     try:
 
         # Step 1: Create query
+        statement = select(MonitoringMetric)
+        if run_id is not None:
+            statement = statement.where(MonitoringMetric.run_id == run_id)
+        if batch_id is not None:
+            statement = statement.where(MonitoringMetric.batch_id == batch_id)
         statement = (
-            select(MonitoringMetric)
+            statement
             .order_by(MonitoringMetric.id.desc())
-            .limit(100)
+            .limit(limit)
         )
 
         # Step 2: Execute query

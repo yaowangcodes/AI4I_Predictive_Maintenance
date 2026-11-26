@@ -1,0 +1,9 @@
+# Docker Desktop / Linux host-gateway: FastAPI runs outside Compose.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+scrape_configs:
+  - job_name: ai4i-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['host.docker.internal:8000']

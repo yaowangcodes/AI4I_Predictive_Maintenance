@@ -1,0 +1,2173 @@
+{
+  "uid": "ai4i-monitoring",
+  "title": "AI4I MLOps Monitoring",
+  "tags": [
+    "AI4I",
+    "MLOps"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "model",
+        "label": "Model",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "ai4i-postgres"
+        },
+        "query": "SELECT DISTINCT model_name FROM monitoring_metrics WHERE run_id IS NOT NULL ORDER BY model_name",
+        "definition": "SELECT DISTINCT model_name FROM monitoring_metrics WHERE run_id IS NOT NULL ORDER BY model_name",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false,
+        "options": [],
+        "current": {},
+        "sort": 0
+      },
+      {
+        "name": "version",
+        "label": "Version",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "ai4i-postgres"
+        },
+        "query": "SELECT DISTINCT model_version FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} ORDER BY model_version DESC",
+        "definition": "SELECT DISTINCT model_version FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} ORDER BY model_version DESC",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false,
+        "options": [],
+        "current": {},
+        "sort": 0
+      },
+      {
+        "name": "mode",
+        "label": "Simulation mode",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "ai4i-postgres"
+        },
+        "query": "SELECT DISTINCT simulation_mode FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} AND model_version=${version:sqlstring} ORDER BY simulation_mode",
+        "definition": "SELECT DISTINCT simulation_mode FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} AND model_version=${version:sqlstring} ORDER BY simulation_mode",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": true,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 0,
+        "allValue": "__all"
+      },
+      {
+        "name": "batch",
+        "label": "Batch",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "ai4i-postgres"
+        },
+        "query": "SELECT DISTINCT batch_id AS __value, simulation_mode || ' \u00b7 ' || left(batch_id,8) AS __text FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} AND model_version=${version:sqlstring} AND (${mode:sqlstring}='__all' OR simulation_mode=${mode:sqlstring}) AND $__timeFilter(calculated_at) ORDER BY __text",
+        "definition": "SELECT DISTINCT batch_id AS __value, simulation_mode || ' \u00b7 ' || left(batch_id,8) AS __text FROM monitoring_metrics WHERE run_id IS NOT NULL AND model_name=${model:sqlstring} AND model_version=${version:sqlstring} AND (${mode:sqlstring}='__all' OR simulation_mode=${mode:sqlstring}) AND $__timeFilter(calculated_at) ORDER BY __text",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": true,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "sort": 0,
+        "allValue": "__all"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "AI4I \u00b7 Predictive maintenance",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "description": "",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Service health \u2192 distribution shift \u2192 failure detection\nAPI metrics cover all application traffic. Evidently panels show only manifest-tracked batches for the selected model/version. Latest-run cards respect the time, mode and batch filters. **Missing labels remain unavailable.**"
+      }
+    },
+    {
+      "id": 2,
+      "title": "01 / API operations",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 3,
+      "title": "HTTP requests \u00b7 total",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(ai4i_http_requests_total{job=\"ai4i-api\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Prediction requests",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(ai4i_prediction_requests_total{job=\"ai4i-api\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 5,
+      "title": "HTTP errors \u00b7 4xx + 5xx",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(ai4i_http_errors_total{job=\"ai4i-api\"}) or vector(0)",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Average latency \u00b7 5m",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(rate(ai4i_http_request_duration_seconds_sum{job=\"ai4i-api\"}[5m])) / sum(rate(ai4i_http_request_duration_seconds_count{job=\"ai4i-api\"}[5m]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 7,
+      "title": "P95 latency \u00b7 5m",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ai4i_http_request_duration_seconds_bucket{job=\"ai4i-api\"}[5m])))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 8,
+      "title": "API scrape availability",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 4,
+        "w": 4,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "min(up{job=\"ai4i-api\"})",
+          "legendFormat": "",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Request rate by endpoint",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum by (endpoint) (rate(ai4i_http_requests_total{job=\"ai4i-api\"}[1m]))",
+          "legendFormat": "{{endpoint}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "HTTP error rate \u00b7 4xx + 5xx",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 8,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "(sum(rate(ai4i_http_errors_total{job=\"ai4i-api\"}[1m])) or vector(0)) / clamp_min(sum(rate(ai4i_http_requests_total{job=\"ai4i-api\"}[1m])), 0.000001)",
+          "legendFormat": "HTTP error fraction",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Successful vs failed requests",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 16,
+        "y": 8,
+        "w": 8,
+        "h": 6
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(rate(ai4i_http_requests_total{job=\"ai4i-api\",status=~\"[23]..\"}[1m])) or vector(0)",
+          "legendFormat": "Successful (2xx/3xx)",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum(rate(ai4i_http_requests_total{job=\"ai4i-api\",status=~\"[45]..\"}[1m])) or vector(0)",
+          "legendFormat": "Failed (4xx/5xx)",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "02 / Data drift \u00b7 latest selected monitoring run",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 13,
+      "title": "Dataset drift status",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Dataset drift status\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='dataset_drift'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NORMAL",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "DRIFT",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 14,
+      "title": "Monitored features",
+      "type": "stat",
+      "gridPos": {
+        "x": 6,
+        "y": 15,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Monitored features\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='number_of_features'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 15,
+      "title": "Drifting features",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Drifting features\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='number_of_drifted_features'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 16,
+      "title": "Share of drifting features",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 15,
+        "w": 6,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Share of drifting features\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='share_of_drifted_features'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 17,
+      "title": "Drift share vs configured threshold",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "SELECT calculated_at AS time, metric_value AS \"Drifted share\", threshold AS \"Configured threshold\" FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at) AND metric_name='share_of_drifted_features' ORDER BY calculated_at",
+          "format": "time_series",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "title": "Feature evidence \u00b7 distances are method-specific",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Wasserstein is normalized numerical distance; Jensen\u2013Shannon measures categorical shift. Scores are not pooled or treated as p-values.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT feature_name AS \"Feature\", metric_value AS \"Distance\", statistical_method AS \"Method\", threshold AS \"Threshold\", status AS \"Status\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='feature_drift_score' ORDER BY feature_name",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "drift": {
+                        "text": "DRIFT",
+                        "color": "red"
+                      },
+                      "normal": {
+                        "text": "Normal",
+                        "color": "green"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Feature"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 250
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Distance"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Method"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Threshold"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    },
+    {
+      "id": 19,
+      "title": "03 / Model performance \u00b7 class 1 = machine failure",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "Accuracy",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Accuracy\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='accuracy'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 21,
+      "title": "Precision",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Precision\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='precision'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 22,
+      "title": "Recall",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Recall\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='recall'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 23,
+      "title": "F1 score",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"F1 score\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='f1'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 24,
+      "title": "ROC-AUC",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"ROC-AUC\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='roc_auc'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 25,
+      "title": "Label coverage",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 28,
+        "w": 4,
+        "h": 4
+      },
+      "description": "Latest selected run only. Synthetic feature drift has no eligible ground truth; performance is unavailable, never filled from an older normal run.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1) SELECT metric_value AS \"Label coverage\" FROM monitoring_metrics WHERE run_id=(SELECT run_id FROM latest) AND metric_name='label_coverage'",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 26,
+      "title": "04 / Batch context & alert scope",
+      "type": "row",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 1
+      },
+      "description": "",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 27,
+      "title": "Selected run \u00b7 label count, mode and model identity",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 5
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "ai4i-postgres"
+          },
+          "rawSql": "WITH latest AS (SELECT run_id FROM monitoring_metrics WHERE run_id IS NOT NULL\n AND model_name = ${model:sqlstring} AND model_version = ${version:sqlstring}\n AND (${mode:sqlstring} = '__all' OR simulation_mode = ${mode:sqlstring})\n AND (${batch:sqlstring} = '__all' OR batch_id = ${batch:sqlstring})\n AND $__timeFilter(calculated_at)\n AND metric_name = 'dataset_drift' ORDER BY calculated_at DESC, id DESC LIMIT 1)\n SELECT calculated_at AS \"Calculated\", model_name AS \"Model\", model_version AS \"Version\",\n simulation_mode AS \"Mode\", batch_id AS \"Batch\", run_id AS \"Run\", sample_size AS \"Predictions\",\n (SELECT metric_value FROM monitoring_metrics labels WHERE labels.run_id=m.run_id AND labels.metric_name='labeled_predictions') AS \"Eligible labels\"\n FROM monitoring_metrics m WHERE run_id=(SELECT run_id FROM latest) AND metric_name='dataset_drift'\n ",
+          "format": "table",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Calculated"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 270
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Version"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mode"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 85
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Batch"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Run"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 280
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Predictions"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Eligible labels"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    },
+    {
+      "id": 28,
+      "title": "Prediction request outcomes \u00b7 since API start",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 4
+      },
+      "description": "",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "ai4i-prometheus"
+          },
+          "expr": "sum by (status) (ai4i_prediction_requests_total{job=\"ai4i-api\"})",
+          "legendFormat": "{{status}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 29,
+      "title": "Grafana drift alert \u00b7 latest result per model/version",
+      "type": "alertlist",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 4
+      },
+      "description": "Alerts ignore dashboard mode/batch filters. Latest result per model/version across batches; null or stale data is No Data. Normal subsequent results recover.",
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Not available",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Not available",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "maxItems": 10,
+        "sortOrder": 1,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "normal": true,
+          "noData": true,
+          "error": true
+        },
+        "alertName": "AI4I dataset drift"
+      }
+    }
+  ]
+}

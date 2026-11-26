@@ -34,3 +34,9 @@ requests
 
 pytest
 httpx
+
+# Drift and model performance monitoring (current API)
+evidently==0.7.23
+
+# API operational metrics
+prometheus-client==0.21.1

@@ -1,0 +1,7 @@
+# Use with -f docker-compose.yml -f docker-compose.monitoring-host.yml.
+services:
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.host.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d

@@ -152,7 +152,7 @@ def test_invalid_feedback(client):
 # Test 9: Metrics endpoint
 def test_metrics(client):
 
-    response = client.get("/metrics")
+    response = client.get("/model-metrics")
 
     assert response.status_code == 200
 
@@ -163,3 +163,10 @@ def test_metrics(client):
     assert isinstance(data["metrics"], list)
 
     assert data["count"] == len(data["metrics"])
+
+
+def test_prometheus_metrics(client):
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "text/plain" in response.headers["content-type"]
+    assert "ai4i_http_requests_total" in response.text

@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-11-26T00:53:13.412305+00:00",
+  "expected": "nodata",
+  "prometheus_target": "up",
+  "datasources": "healthy",
+  "rule_state": "inactive",
+  "health": "nodata",
+  "instances": [
+    "NoData"
+  ],
+  "annotations": [
+    {
+      "__dashboardUid__": "ai4i-monitoring",
+      "__panelId__": "13",
+      "description": "Latest stored Evidently result indicates drift. Review its feature methods and thresholds. A subsequent normal result recovers this alert. No automatic retraining.",
+      "summary": "Dataset drift for AI4I_Predictive_Maintenance version 7"
+    }
+  ]
+}
