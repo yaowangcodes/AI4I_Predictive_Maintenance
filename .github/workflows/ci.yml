@@ -1,0 +1,99 @@
+
+name: CI
+
+on:
+  push:
+    branches: ["feature/**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgomp1
+          pip install -r requirements.txt
+          pip install ruff pytest
+
+      - name: Linting
+        run: ruff check . --select E9,F63,F7,F82
+
+      - name: Configure CI environment
+        run: |
+          cat > .env <<EOF
+          POSTGRES_USER=ai4i_user
+          POSTGRES_PASSWORD=ci_test_password
+          POSTGRES_DB=ai4i_db
+          POSTGRES_HOST=127.0.0.1
+          POSTGRES_PORT=5432
+          MODEL_NAME=AI4I_Predictive_Maintenance
+          MODEL_VERSION=
+          MLFLOW_TRACKING_URI=http://127.0.0.1:5001
+          GRAFANA_ADMIN_USER=admin
+          GRAFANA_ADMIN_PASSWORD=ci_admin_password
+          GRAFANA_DB_USER=ai4i_grafana
+          GRAFANA_DB_PASSWORD=ci_grafana_password
+          EOF
+
+          mkdir -p mlflow_storage artifacts
+
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/ \
+            --ignore=tests/test_api.py \
+            -q --tb=short
+
+      - name: Start Docker services
+        run: |
+          docker compose up -d --build api
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Run API tests
+        run: |
+          python -m pytest tests/test_api.py -q --tb=short
+
+      - name: Docker integration test
+        run: |
+          curl -fsS -X POST http://127.0.0.1:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{
+              "Type": "M",
+              "air_temperature": 298.1,
+              "process_temperature": 308.6,
+              "rotational_speed": 1551,
+              "torque": 42.8,
+              "tool_wear": 120
+            }' | python -c 'import sys,json; d=json.load(sys.stdin); assert d["prediction"] in [0,1]; assert 0 <= d["failure_probability"] <= 1; print(d)'
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose down

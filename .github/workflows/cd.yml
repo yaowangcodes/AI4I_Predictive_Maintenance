@@ -1,0 +1,50 @@
+
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - image: ai4i-api
+            dockerfile: Dockerfile.api
+
+          - image: ai4i-frontend
+            dockerfile: Dockerfile.frontend
+
+          - image: ai4i-pipeline
+            dockerfile: Dockerfile.pipeline
+
+          - image: ai4i-mlflow
+            dockerfile: Dockerfile.mlflow
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ghcr.io/yaowangcodes/${{ matrix.image }}:latest
+            ghcr.io/yaowangcodes/${{ matrix.image }}:${{ github.sha }}
