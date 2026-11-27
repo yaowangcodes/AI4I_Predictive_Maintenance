@@ -1,0 +1,37 @@
+
+services:
+
+  api:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-api:latest
+    pull_policy: always
+
+  frontend:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-frontend:latest
+    pull_policy: always
+
+  mlflow:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-mlflow:latest
+    pull_policy: always
+
+  bootstrap:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-pipeline:latest
+    pull_policy: always
+
+  training:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-pipeline:latest
+    pull_policy: always
+
+  simulator:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-pipeline:latest
+    pull_policy: always
+
+  monitoring:
+    build: !reset null
+    image: ghcr.io/yaowangcodes/ai4i-pipeline:latest
+    pull_policy: always

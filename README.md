@@ -1,13 +1,136 @@
+<<<<<<< Updated upstream
 # AI4I Predictive Maintenance — MLOps Pipeline
 
 INSY 684 | McGill University
+=======
+# AI4I Predictive Maintenance — End-to-End MLOps
+Winston(Yao) Wang
+>>>>>>> Stashed changes
 
 ## Overview
 
+<<<<<<< Updated upstream
 This project builds an end-to-end MLOps system for machine failure prediction using the AI4I 2020 Predictive Maintenance dataset. The system is designed to support reproducible model training, experiment tracking, model registration, prediction serving, and production monitoring.
+=======
+## 1. Quick Start — One-command GHCR Deployment (Recommended)
+
+The four custom images are published to GitHub Container Registry (GHCR) by GitHub Actions. Users can download the prebuilt images instead of rebuilding the Python environments locally. PostgreSQL, Prometheus and Grafana use their upstream images.
+
+### Prerequisites
+
+- Git, a current Docker Compose v2 installation (Docker Desktop is suitable), Bash and OpenSSL for the deployment script. On Windows, use Git Bash with Docker Desktop running in Linux-container mode.
+- Available ports: 5432, 5001, 8000, 8501, 9090 and 3000.
+- All four GHCR packages must be publicly accessible for anonymous pulls. Verify the image platform matches your machine (`linux/amd64` or `linux/arm64`); a compatible emulation setup may be needed on Apple Silicon if only AMD64 images are published.
+- No host Python, MLflow or PostgreSQL installation is required.
+
+### Deploy from published images
+
+```bash
+git clone https://github.com/yaowangcodes/AI4I_Predictive_Maintenance.git
+cd AI4I_Predictive_Maintenance
+bash deploy.sh
+```
+
+This deployment path requires `deploy.sh` and `docker-compose.prod.yml` to be added to the repository. If they are not yet present, use the source-build alternative below. The proposed script generates local credentials on first use, preserves an existing `.env`, creates persistent directories and starts the full stack with the production override. The override removes local build definitions and maps the custom services to the published images.
+
+| Service(s) | Published image |
+|---|---|
+| API | `ghcr.io/yaowangcodes/ai4i-api:latest` |
+| Frontend | `ghcr.io/yaowangcodes/ai4i-frontend:latest` |
+| Bootstrap, training, simulator, monitoring | `ghcr.io/yaowangcodes/ai4i-pipeline:latest` |
+| MLflow | `ghcr.io/yaowangcodes/ai4i-mlflow:latest` |
+
+After the deployment script has created `.env`, equivalent manual lifecycle commands are:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile jobs pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps -a
+curl -fsS http://localhost:8000/health
+```
+
+For a reproducible release, pin all four images to the same published commit SHA rather than the moving `latest` tag. The images do not include historical database records or the original local MLflow registry; bootstrap initializes those services on the target machine.
+
+### Alternative: build locally from source
+
+#### Configuration and startup
+
+```bash
+git clone https://github.com/yaowangcodes/AI4I_Predictive_Maintenance.git
+cd AI4I_Predictive_Maintenance
+cp .env.example .env
+```
+
+Edit `.env` before starting. Set unique local passwords, preserve existing credentials if reusing a database volume, and leave `MODEL_VERSION` empty for a new installation. Ensure these settings are present (example values are placeholders):
+
+```dotenv
+POSTGRES_USER=ai4i_user
+POSTGRES_PASSWORD=replace_with_local_password
+POSTGRES_DB=ai4i_db
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+MODEL_NAME=AI4I_Predictive_Maintenance
+MODEL_VERSION=
+MLFLOW_TRACKING_URI=http://127.0.0.1:5001
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=replace_with_admin_password
+GRAFANA_DB_USER=ai4i_grafana
+GRAFANA_DB_PASSWORD=replace_with_grafana_db_password
+```
+
+Do not commit `.env`, `.env.monitoring`, or local database credentials.
+
+```bash
+mkdir -p mlflow_storage artifacts
+docker compose up -d --build
+docker compose ps -a
+curl -fsS http://localhost:8000/health
+```
+
+Docker Compose starts PostgreSQL and MLflow, then runs the one-time bootstrap job. Bootstrap creates the tables, applies monitoring migrations, configures Grafana's dedicated read-only database role, and checks the model registry. When no ready model exists and no version is pinned, it runs the training flow and verifies the registered model. API and Grafana depend on successful bootstrap completion; Streamlit waits for the API health check. `bootstrap` showing `Exited (0)` is expected.
+
+A specified `MODEL_VERSION` pins the deployment to that version. An empty value selects the latest ready version. The previously validated local deployment used version 7; a new registry will have its own version numbering.
+
+| Service | Local URL |
+|---|---|
+| Streamlit | http://localhost:8501 |
+| FastAPI Swagger | http://localhost:8000/docs |
+| API health | http://localhost:8000/health |
+| MLflow | http://localhost:5001 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
+| PostgreSQL | localhost:5432 |
+
+### Stop and restart
+
+For GHCR deployments, use the same Compose files for all lifecycle commands:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
+```
+
+For source-build deployments, use `docker compose down` and `docker compose up -d`. Do not add `-v` unless intentionally deleting stored database and monitoring volumes.
+
+### Running training and traffic jobs after GHCR deployment
+
+Use both Compose files for one-off jobs too, so they use the published pipeline image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm --no-deps simulator --mode normal --n 200 --delay 0.05
+```
+
+Run jobs only after the stack is healthy. For subsequent training and monitoring commands in this README, replace `docker compose` with `docker compose -f docker-compose.yml -f docker-compose.prod.yml` when using GHCR. See Section 8 for the normal and drift demonstration.
+
+**Deployment validation:** image publication and source-based CI integration have passed. The GHCR override and one-command script have been proposed but their presence in the repository, anonymous access to all four packages, and end-to-end execution on a new machine have not yet been verified.
+
+
+## 2. Business Problem
+>>>>>>> Stashed changes
 
 The current implementation includes data preparation, model training and MLflow registration, FastAPI serving, traffic simulation, Evidently monitoring, PostgreSQL metrics storage, and a provisioned Prometheus/Grafana dashboard with drift alerts.
 
+<<<<<<< Updated upstream
 ## Business Problem
 
 Unexpected machine failures can cause production downtime and maintenance costs. The project aims to identify potentially failing equipment using operational measurements, supporting proactive maintenance decisions. The dataset is synthetic, so the project demonstrates technical feasibility rather than validated performance in a real industrial setting.
@@ -31,6 +154,9 @@ Identifiers and failure-mode labels should not be used as prediction inputs. The
 ## System Architecture
 
 The following diagram represents the intended end-to-end architecture. Dashed connections indicate planned or in-progress integrations.
+=======
+## 3. System Architecture
+>>>>>>> Stashed changes
 
 ```mermaid
 flowchart TD
@@ -51,7 +177,11 @@ flowchart TD
     N[pgAdmin - optional] -. Database inspection .-> K
 ```
 
+<<<<<<< Updated upstream
 ## Implementation Status
+=======
+## 4. Technology Stack
+>>>>>>> Stashed changes
 
 | Component | Technology | Status |
 |---|---|---|
@@ -66,7 +196,11 @@ flowchart TD
 | Monitoring dashboard and drift alerting | Grafana, Prometheus | Implemented |
 | GitHub Actions and branch protection | GitHub | Final verification pending |
 
+<<<<<<< Updated upstream
 ## Project Structure
+=======
+## 5. Dataset and Features
+>>>>>>> Stashed changes
 
 ```text
 684project/
@@ -102,6 +236,7 @@ The tree reflects the current development plan; API files and other unconfirmed 
 
 ## Getting Started
 
+<<<<<<< Updated upstream
 ### 1. Install dependencies
 
 Requirements: Python, pip, Docker Desktop with Docker Compose, and Git. Use a dedicated virtual environment for reproducibility. Use the Python version validated by the project; the current local development environment uses Python 3.13.
@@ -144,6 +279,13 @@ If pgAdmin is configured in Docker Compose, start it with `docker compose up -d 
 ### 4. Start MLflow
 
 In a separate terminal, from the project root:
+=======
+## 6. Model Training and Registry
+
+The Prefect training flow orchestrates data loading, cleaning, splitting, preprocessing, candidate training, validation, final evaluation, model registration and reload verification. Candidate models include a dummy baseline, balanced logistic regression, random forests and XGBoost with several positive-class weights. Candidate ranking uses validation average precision, which is useful for imbalanced binary classification.
+
+Run training explicitly when needed:
+>>>>>>> Stashed changes
 
 ```bash
 mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5001
@@ -735,6 +877,7 @@ process-local, so multiple workers require Prometheus multiprocess setup first.
 | `ai4i_http_request_duration_seconds` | Histogram of full-response duration, including failures |
 | `ai4i_prediction_requests_total` | POST `/predict` responses by status, including validation failures |
 
+<<<<<<< Updated upstream
 Unknown URLs share `endpoint="unmatched"`; path parameters remain route templates.
 There are no batch IDs, prediction IDs, features, or user identifiers in Prometheus
 labels. Scrapes are excluded from application counters and latency. Each app has
@@ -743,12 +886,16 @@ collectors. Counters reset on API restart, including development auto-reloads;
 Prometheus `rate()` handles resets. Totals describe the current process lifetime,
 not all PostgreSQL history. API availability means successful scraping, not a
 separate database/model readiness probe; `/health` remains available for readiness.
+=======
+CD publishes images rather than automatically replacing running local containers. Package visibility and external pull access must be checked separately. The Quick Start documents the proposed GHCR deployment override and retains the verified source-build alternative.
+>>>>>>> Stashed changes
 
 Example queries (the dashboard includes equivalent queries):
 
 ```promql
 sum(rate(ai4i_http_requests_total{job="ai4i-api"}[1m]))
 
+<<<<<<< Updated upstream
 sum(rate(ai4i_http_request_duration_seconds_sum{job="ai4i-api"}[5m]))
 / sum(rate(ai4i_http_request_duration_seconds_count{job="ai4i-api"}[5m]))
 
@@ -759,6 +906,33 @@ histogram_quantile(0.95,
 / clamp_min(sum(rate(ai4i_http_requests_total{job="ai4i-api"}[1m])), 0.000001)
 
 sum by (status) (ai4i_prediction_requests_total{job="ai4i-api"})
+=======
+```text
+.
+├── .github/workflows/       # CI and CD workflows
+├── api/                     # FastAPI, schemas, model loading, instrumentation
+├── artifacts/               # Data splits, reference data and model outputs
+├── database/                # ORM models, connections, initialization, migration
+├── frontend/                # Streamlit application
+├── monitoring/              # Prometheus and Grafana configuration
+├── scripts/                 # Bootstrap, simulator and monitoring utilities
+├── tasks/                   # Prefect training tasks
+├── tests/                   # Automated tests
+├── ai4i2020.csv             # Source dataset
+├── config.py                # Shared configuration
+├── training_flow.py         # Training orchestration
+├── monitoring_flow.py       # Monitoring orchestration
+├── Dockerfile.api
+├── Dockerfile.frontend
+├── Dockerfile.pipeline
+├── Dockerfile.mlflow
+├── docker-compose.yml
+├── docker-compose.prod.yml  # GHCR override (proposed addition)
+├── deploy.sh                # One-command deployment (proposed addition)
+├── requirements.txt
+├── .env.example
+└── README.md
+>>>>>>> Stashed changes
 ```
 
 ### Dashboard and alert behavior
@@ -835,9 +1009,19 @@ performance because the modified observations have no valid ground truth.
 
 ![Grafana after drift injection](docs/screenshots/monitoring-drift.png)
 
+<<<<<<< Updated upstream
 To recapture after the corresponding demo step, optionally install the screenshot
 helper's development dependency. It uses an installed Chrome browser; it is not
 needed by the API, monitoring flow, or Docker services:
+=======
+- Existing-environment Docker Compose startup was validated: six long-running services started and bootstrap exited successfully.
+- Local tests and the corrected CI workflow passed; the CD image publishing workflow completed successfully.
+- GHCR publication is confirmed; the proposed deployment script and override have not been independently tested.
+- A separate clean-installation test on an independent local environment was not performed. Fresh-registry initialization is exercised by the configured CI workflow, but independent full-stack installation remains to be verified.
+- The dataset is synthetic; performance on real industrial equipment is not established.
+- Monitoring depends on valid reference data, sufficient traffic and available feedback. Alerts require human review.
+- The stack is intended for local educational demonstration, not a hardened production deployment.
+>>>>>>> Stashed changes
 
 ```bash
 python -m pip install playwright==1.56.0
